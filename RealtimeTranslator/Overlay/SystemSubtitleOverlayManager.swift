@@ -255,10 +255,10 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         UIColor.clear.setFill()
         UIBezierPath(rect: CGRect(origin: .zero, size: renderSize)).fill()
 
-        let displayText = compactSubtitle(text)
-        guard !displayText.isEmpty else {
-            UIGraphicsPopContext()
-            return pixelBuffer
+        var displayText = compactSubtitle(text)
+        let isPlaceholder = displayText.isEmpty
+        if isPlaceholder {
+            displayText = "Đang lắng nghe..."
         }
 
         let paragraph = NSMutableParagraphStyle()
@@ -274,7 +274,7 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         let fontSize: CGFloat = 25
         let textAttrs: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
-            .foregroundColor: UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
+            .foregroundColor: isPlaceholder ? UIColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.8) : UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
             .paragraphStyle: paragraph,
             .strokeColor: UIColor.black.withAlphaComponent(0.9),
             .strokeWidth: NSNumber(value: -2.5),
