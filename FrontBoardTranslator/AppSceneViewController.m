@@ -58,10 +58,7 @@
          settings.displayConfiguration = UIScreen.mainScreen.displayConfiguration;
          settings.foreground = YES;
          settings.frame = self.bounds;
-         settings.interfaceOrientation = UIApplication.sharedApplication.statusBarOrientation;
-         if (settings.interfaceOrientation == UIInterfaceOrientationUnknown) {
-             settings.interfaceOrientation = UIInterfaceOrientationPortrait;
-         }
+         settings.interfaceOrientation = UIInterfaceOrientationPortrait;
          //settings.interruptionPolicy = 2; // reconnect
          settings.level = 1;
          settings.peripheryInsets = UIEdgeInsetsMake(self.navigationBar.frame.size.height, 0, 0, 0);
@@ -74,7 +71,7 @@
          parameters.settings = settings;
 
          UIMutableApplicationSceneClientSettings *clientSettings = [UIMutableApplicationSceneClientSettings new];
-         clientSettings.interfaceOrientation = settings.interfaceOrientation;
+         clientSettings.interfaceOrientation = UIInterfaceOrientationPortrait;
          clientSettings.statusBarStyle = 0;
          parameters.clientSettings = clientSettings;
 
@@ -125,9 +122,6 @@
     
     settings.deviceOrientation = UIDevice.currentDevice.orientation;
     settings.interfaceOrientation = UIApplication.sharedApplication.statusBarOrientation;
-    if (settings.interfaceOrientation == UIInterfaceOrientationUnknown) {
-        settings.interfaceOrientation = UIInterfaceOrientationPortrait;
-    }
     if(UIInterfaceOrientationIsLandscape(settings.interfaceOrientation)) {
         settings.frame = CGRectMake(0, 0, frame.size.height, frame.size.width);
     } else {
@@ -154,7 +148,7 @@
     parameters.settings = settings;
     
     UIMutableApplicationSceneClientSettings *clientSettings = [UIMutableApplicationSceneClientSettings new];
-    clientSettings.interfaceOrientation = settings.interfaceOrientation;
+    clientSettings.interfaceOrientation = UIInterfaceOrientationPortrait;
     clientSettings.statusBarStyle = 0;
     parameters.clientSettings = clientSettings;
     

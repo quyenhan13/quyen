@@ -26,7 +26,7 @@ struct HomeView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
                         .allowsHitTesting(false)
-                        .opacity(1.0)
+                        .opacity(systemOverlay.isRunning ? 1.0 : 0.01)
 
                     tabBar
                     listenPanel
@@ -44,32 +44,22 @@ struct HomeView: View {
         .accentColor(.white)
         .onAppear {
             _ = settings.syncSharedSettings()
+            subtitleManager.resetSharedSubtitleCache()
             subtitleManager.startBroadcastSubtitleSync()
             Task {
                 await autoUpdateManager.checkForUpdates(silent: true)
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .transifyrBroadcastButtonTapped)) { _ in
-            guard settings.syncSharedSettings() else {
-                alertMessage = "Vui lòng vào Cài đặt và lưu Soniox API Key trước khi bật Broadcast."
-                showAlert = true
-                return
-            }
-            guard systemOverlay.isSupported else {
-                alertMessage = "May nay khong ho tro PiP overlay de hien ben ngoai app."
-                showAlert = true
-                return
-            }
-            systemOverlay.start()
         }
 
         .onDisappear {
             subtitleManager.stopBroadcastSubtitleSync()
         }
         .onChange(of: subtitleManager.currentTranslatedText) { newValue in
+            if newValue.isEmpty && subtitleManager.currentText.isEmpty { return }
             systemOverlay.update(text: subtitleManager.currentText, translation: newValue)
         }
         .onChange(of: subtitleManager.currentText) { newValue in
+            if newValue.isEmpty && subtitleManager.currentTranslatedText.isEmpty { return }
             systemOverlay.update(text: newValue, translation: subtitleManager.currentTranslatedText)
         }
         .alert(isPresented: $showAlert) {
@@ -91,7 +81,7 @@ struct HomeView: View {
 
     private var listenPanel: some View {
         HStack(spacing: 14) {
-            ZStack {
+            Button(action: startBroadcastMode) {
                 HStack(spacing: 8) {
                     Image(systemName: systemOverlay.isRunning ? "stop.fill" : "record.circle.fill")
                     Text(systemOverlay.isRunning ? "Dừng dịch" : "Bắt đầu thu")
@@ -103,20 +93,21 @@ struct HomeView: View {
                 .background(systemOverlay.isRunning ? TransifyrTheme.dangerGradient : TransifyrTheme.accentGradient)
                 .clipShape(Capsule())
                 .shadow(color: (systemOverlay.isRunning ? Color.red : TransifyrTheme.accent).opacity(0.4), radius: 12, y: 6)
-
-                if !systemOverlay.isRunning {
-                    BroadcastPickerButton()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .opacity(0.015)
-                        .allowsHitTesting(true)
-                } else {
-                    Button(action: startBroadcastMode) {
-                        Color.clear
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
             }
-            .fixedSize()
+
+            Button(action: startPiPOnly) {
+                HStack(spacing: 8) {
+                    Image(systemName: "pip.enter")
+                    Text("PiP")
+                }
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color.white.opacity(0.08))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+            }
 
             Button(action: testOverlay) {
                 HStack(spacing: 8) {
@@ -198,9 +189,7 @@ struct HomeView: View {
 
     private var broadcastPanel: some View {
         HStack(spacing: 12) {
-            Image(systemName: "waveform.and.mic")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(systemOverlay.isRunning ? .green : TransifyrTheme.textSecondary)
+            BroadcastPickerButton()
                 .frame(width: 44, height: 44)
                 .background(TransifyrTheme.input)
                 .clipShape(Circle())
@@ -346,7 +335,7 @@ struct HomeView: View {
 
     private func toggleFloatingOverlay() {
         if systemOverlay.isRunning {
-            subtitleManager.clear()
+            subtitleManager.requestBroadcastStop()
             systemOverlay.stop()
         } else {
             systemOverlay.start()
@@ -374,15 +363,23 @@ struct HomeView: View {
         )
     }
 
+    private func startPiPOnly() {
+        if systemOverlay.isRunning {
+            systemOverlay.stop()
+        }
+        PlayerLayerPiPSubtitleManager.shared.update(translation: "Đang thử phụ đề nổi bằng PiP.")
+        PlayerLayerPiPSubtitleManager.shared.start()
+    }
+
     private func startBroadcastMode() {
         if systemOverlay.isRunning {
-            subtitleManager.clear()
+            subtitleManager.requestBroadcastStop()
             systemOverlay.stop()
             return
         }
 
         guard settings.syncSharedSettings() else {
-            alertMessage = "Vui lòng vào Cài đặt và lưu Soniox API Key trước khi bật Broadcast."
+            alertMessage = "Vui l\u{00F2}ng v\u{00E0}o C\u{00E0}i \u{0111}\u{1EB7}t v\u{00E0} l\u{01B0}u Soniox API Key tr\u{01B0}\u{1EDB}c khi b\u{1EAD}t Broadcast."
             showAlert = true
             return
         }
@@ -393,8 +390,9 @@ struct HomeView: View {
             return
         }
 
+        _ = subtitleManager.beginBroadcastSession()
         systemOverlay.start()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             NotificationCenter.default.post(name: .transifyrStartBroadcast, object: nil)
         }
     }
@@ -444,32 +442,19 @@ enum TransifyrTheme {
 struct SystemOverlayLayerView: UIViewRepresentable {
     let displayLayer: AVSampleBufferDisplayLayer
 
-    func makeUIView(context: Context) -> LayerContainerView {
-        return LayerContainerView(displayLayer: displayLayer)
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .clear
+        
+        displayLayer.frame = view.bounds
+        view.layer.addSublayer(displayLayer)
+        return view
     }
 
-    func updateUIView(_ uiView: LayerContainerView, context: Context) {}
-    
-    final class LayerContainerView: UIView {
-        let displayLayer: AVSampleBufferDisplayLayer
-        
-        init(displayLayer: AVSampleBufferDisplayLayer) {
-            self.displayLayer = displayLayer
-            super.init(frame: .zero)
-            backgroundColor = .clear
-            layer.addSublayer(displayLayer)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        override func layoutSubviews() {
-            super.layoutSubviews()
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            displayLayer.frame = bounds
-            CATransaction.commit()
-        }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        displayLayer.frame = uiView.bounds
+        CATransaction.commit()
     }
 }

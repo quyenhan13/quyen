@@ -42,6 +42,7 @@ final class SonioxWebSocketClient: ObservableObject {
     private var lastSourceLang = "auto"
     private var lastTargetLang = "vi"
     private var manuallyDisconnected = false
+    private let automaticLanguageHints = ["en", "vi", "zh", "ja", "ko", "th", "id", "es", "fr", "de", "ru"]
     
     var onTranslationResult: ((SonioxResponse) -> Void)?
     var onError: ((String) -> Void)?
@@ -107,7 +108,7 @@ final class SonioxWebSocketClient: ObservableObject {
             enableEndpointDetection: true,
             enableLanguageIdentification: sourceCode == nil,
             maxEndpointDelayMs: 80,
-            languageHints: sourceCode.map { [$0] },
+            languageHints: sourceCode.map { [$0] } ?? automaticLanguageHints,
             translation: translation
         )
         

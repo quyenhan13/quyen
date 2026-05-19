@@ -21,7 +21,7 @@ final class SystemFloatingSceneManager: ObservableObject {
     }
 
     private var systemSceneEnabled: Bool {
-        UserDefaults.standard.object(forKey: enableKey) as? Bool ?? false
+        UserDefaults.standard.object(forKey: enableKey) as? Bool ?? true
     }
 
     var diagnosticSummary: String {

@@ -88,7 +88,7 @@ struct SettingsView: View {
     }
 
     private var overlayCard: some View {
-        settingsCard(title: "Phụ đề Overlay", subtitle: "Chọn cách hiển thị phụ đề nổi hệ thống (PiP) hoặc trong trình duyệt.") {
+        settingsCard(title: "Phụ đề Overlay", subtitle: "Chọn phong cách hiển thị khi xem phim trong trình duyệt.") {
             labeledPicker(
                 "Style phụ đề",
                 selection: $settings.overlayStyle,
@@ -96,12 +96,6 @@ struct SettingsView: View {
             )
 
             Toggle("Hiển thị câu gốc (dòng trực tiếp)", isOn: $settings.showOriginalSubtitle)
-                .tint(TransifyrTheme.accent)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.top, 6)
-
-            Toggle("Chế độ cửa sổ dịch nổi trong app", isOn: $settings.enableSystemFloatingScene)
                 .tint(TransifyrTheme.accent)
                 .font(.system(size: 15, weight: .bold))
                 .foregroundColor(.white)

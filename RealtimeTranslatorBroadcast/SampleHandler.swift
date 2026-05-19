@@ -3,13 +3,20 @@ import CoreMedia
 import ReplayKit
 
 final class SampleHandler: RPBroadcastSampleHandler {
-    private static let appGroupID = "group.com.vteen.Transifyr"
+    private static let appGroupID = "group.com.vteen.RealtimeTranslator"
     private let client = BroadcastSonioxClient()
     private let converter = BroadcastPCMConverter()
     private let defaults = UserDefaults(suiteName: appGroupID)
-    private var lastAudioStatusAt: TimeInterval = 0
+    private var stopRequested = false
+    private var stopPollTimer: Timer?
 
     override func broadcastStarted(withSetupInfo setupInfo: [String : NSObject]?) {
+        stopRequested = false
+        clearSharedSubtitle(updateTimestamp: true)
+        defaults?.set(true, forKey: "broadcast_should_run")
+        if defaults?.string(forKey: "broadcast_session_id") == nil {
+            defaults?.set(UUID().uuidString, forKey: "broadcast_session_id")
+        }
         setBroadcastStatus("starting")
         let sharedSettings = loadSharedSettingsFile()
         let apiKey = firstNonEmpty(
@@ -33,10 +40,10 @@ final class SampleHandler: RPBroadcastSampleHandler {
             return
         }
 
-        client.onTranslation = { [weak self] original, translation, isFinal in
+        client.onTranslation = { [weak self] original, translation in
+            guard !translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
             self?.defaults?.set(original, forKey: "broadcast_current_original")
             self?.defaults?.set(translation, forKey: "broadcast_current_translation")
-            self?.defaults?.set(isFinal, forKey: "broadcast_is_final")
             self?.defaults?.set(Date().timeIntervalSince1970, forKey: "broadcast_current_translation_at")
             self?.setBroadcastStatus("receiving_translation")
         }
@@ -44,6 +51,10 @@ final class SampleHandler: RPBroadcastSampleHandler {
             self?.setBroadcastStatus(status)
         }
         client.connect(apiKey: apiKey, sourceLang: sourceLang, targetLang: targetLang)
+        stopPollTimer?.invalidate()
+        stopPollTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in
+            _ = self?.stopFromContainingAppIfNeeded()
+        }
     }
 
     private func setBroadcastStatus(_ status: String) {
@@ -52,13 +63,30 @@ final class SampleHandler: RPBroadcastSampleHandler {
         defaults?.synchronize()
     }
 
-    private func setAudioActive() {
-        let now = Date().timeIntervalSince1970
-        defaults?.set(now, forKey: "broadcast_audio_at")
-        if now - lastAudioStatusAt > 0.8 {
-            lastAudioStatusAt = now
-            setBroadcastStatus("sending_audio")
+    private func clearSharedSubtitle(updateTimestamp: Bool) {
+        defaults?.set("", forKey: "broadcast_current_original")
+        defaults?.set("", forKey: "broadcast_current_translation")
+        if updateTimestamp {
+            defaults?.set(Date().timeIntervalSince1970, forKey: "broadcast_current_translation_at")
         }
+        defaults?.synchronize()
+    }
+
+    private func shouldStopBroadcast() -> Bool {
+        if stopRequested { return false }
+        return defaults?.object(forKey: "broadcast_should_run") as? Bool == false
+    }
+
+    private func stopFromContainingAppIfNeeded() -> Bool {
+        guard shouldStopBroadcast() else { return false }
+        stopRequested = true
+        setBroadcastStatus("stopping")
+        clearSharedSubtitle(updateTimestamp: true)
+        client.disconnect()
+        finishBroadcastWithError(NSError(domain: "TransifyrBroadcast", code: 0, userInfo: [
+            NSLocalizedDescriptionKey: "Đã dừng dịch."
+        ]))
+        return true
     }
 
     private func firstNonEmpty(_ values: String?...) -> String? {
@@ -81,14 +109,19 @@ final class SampleHandler: RPBroadcastSampleHandler {
     }
 
     override func broadcastFinished() {
+        stopPollTimer?.invalidate()
+        stopPollTimer = nil
+        defaults?.set(false, forKey: "broadcast_should_run")
+        clearSharedSubtitle(updateTimestamp: true)
         setBroadcastStatus("finished")
         client.disconnect()
     }
 
     override func processSampleBuffer(_ sampleBuffer: CMSampleBuffer, with sampleBufferType: RPSampleBufferType) {
+        guard !stopFromContainingAppIfNeeded() else { return }
         guard sampleBufferType == .audioApp else { return }
         guard let pcm = converter.convert(sampleBuffer), !pcm.isEmpty else { return }
-        setAudioActive()
+        setBroadcastStatus("sending_audio")
         client.sendAudio(pcm)
     }
 }
@@ -100,14 +133,15 @@ private final class BroadcastSonioxClient {
         config.waitsForConnectivity = true
         return URLSession(configuration: config)
     }()
-    private let lock = NSLock()
     private var pendingAudio: [Data] = []
     private var configSent = false
     private var configPayload: String = ""
-    var onTranslation: ((String, String, Bool) -> Void)?
+    private let automaticLanguageHints = ["en", "vi", "zh", "ja", "ko", "th", "id", "es", "fr", "de", "ru"]
+    var onTranslation: ((String, String) -> Void)?
     var onStatus: ((String) -> Void)?
 
     func connect(apiKey: String, sourceLang: String, targetLang: String) {
+        resetSegment()
         onStatus?("connecting")
         let url = URL(string: "wss://stt-rt.soniox.com/transcribe-websocket")!
         socket = session.webSocketTask(with: url)
@@ -129,6 +163,8 @@ private final class BroadcastSonioxClient {
         ]
         if let sourceCode {
             payload["language_hints"] = [sourceCode]
+        } else {
+            payload["language_hints"] = automaticLanguageHints
         }
 
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
@@ -138,19 +174,14 @@ private final class BroadcastSonioxClient {
         socket?.resume()
         socket?.send(.string(text)) { [weak self] error in
             guard let self else { return }
-            self.lock.lock()
             if error == nil {
                 self.configSent = true
                 self.onStatus?("connected")
-                let chunks = self.pendingAudio
-                self.pendingAudio.removeAll()
-                self.lock.unlock()
-                
-                for chunk in chunks {
+                for chunk in self.pendingAudio {
                     self.socket?.send(.data(chunk)) { _ in }
                 }
+                self.pendingAudio.removeAll()
             } else {
-                self.lock.unlock()
                 self.onStatus?("config_send_failed")
             }
         }
@@ -158,29 +189,22 @@ private final class BroadcastSonioxClient {
     }
 
     func sendAudio(_ data: Data) {
-        lock.lock()
-        guard let socket, socket.state == .running else {
-            lock.unlock()
-            return
-        }
+        guard let socket, socket.state == .running else { return }
         if configSent {
-            lock.unlock()
             socket.send(.data(data)) { _ in }
         } else {
             if pendingAudio.count < 50 {
                 pendingAudio.append(data)
             }
-            lock.unlock()
         }
     }
 
     func disconnect() {
-        lock.lock()
         configSent = false
         pendingAudio.removeAll()
+        resetSegment()
         socket?.cancel(with: .normalClosure, reason: nil)
         socket = nil
-        lock.unlock()
     }
 
     private func receiveLoop() {
@@ -203,6 +227,7 @@ private final class BroadcastSonioxClient {
     // Translation tokens chỉ xuất hiện sau endpoint và luôn là is_final=true
     private var finalOriginalTokens: [String] = []
     private var finalTranslationTokens: [String] = []
+    private var segmentStartedAt = Date()
 
     private func handleResponse(_ text: String) {
         guard let data = text.data(using: .utf8),
@@ -216,8 +241,8 @@ private final class BroadcastSonioxClient {
 
         guard let tokens = json["tokens"] as? [[String: Any]] else { return }
 
-        var currentNonFinalOriginal: [String] = []
-        var currentNonFinalTranslation: [String] = []
+        var nonFinalOriginal = ""
+        var nonFinalTranslation = ""
         var isEndpoint = false
 
         for token in tokens {
@@ -228,39 +253,47 @@ private final class BroadcastSonioxClient {
             }
             guard !tokenText.isEmpty else { continue }
 
-            let isTranslation = (token["translation_status"] as? String == "translation")
-            let committed = isCommitted(token)
-
-            if isTranslation {
-                if committed {
+            let status = (token["translation_status"] as? String)?.lowercased()
+            if status == "translation" {
+                if isCommitted(token) {
                     finalTranslationTokens.append(tokenText)
                 } else {
-                    currentNonFinalTranslation.append(tokenText)
+                    nonFinalTranslation += tokenText
                 }
-            } else {
-                if committed {
+            } else if status == nil || status == "none" || status == "original" {
+                if isCommitted(token) {
                     finalOriginalTokens.append(tokenText)
                 } else {
-                    currentNonFinalOriginal.append(tokenText)
+                    nonFinalOriginal += tokenText
                 }
             }
         }
 
-        let displayOriginal = (finalOriginalTokens + currentNonFinalOriginal).joined()
-        let displayTranslation = (finalTranslationTokens + currentNonFinalTranslation).joined()
-
-        let trimmedOriginal = trimSubtitleBuffer(displayOriginal)
-        let trimmedTranslation = trimSubtitleBuffer(displayTranslation)
-
-        if !trimmedTranslation.isEmpty || !trimmedOriginal.isEmpty {
-            onTranslation?(trimmedOriginal, trimmedTranslation, isEndpoint)
+        let displayOriginal = trimSubtitleBuffer(finalOriginalTokens.joined() + nonFinalOriginal)
+        let displayTranslation = trimSubtitleBuffer(finalTranslationTokens.joined() + nonFinalTranslation)
+        if !displayTranslation.isEmpty {
+            onTranslation?(displayOriginal, displayTranslation)
         }
 
-        if isEndpoint {
-            finalOriginalTokens.removeAll()
-            finalTranslationTokens.removeAll()
+        if isEndpoint || shouldRollSegment(displayOriginal: displayOriginal, displayTranslation: displayTranslation) {
+            resetSegment()
         }
     }
+
+    private func shouldRollSegment(displayOriginal: String, displayTranslation: String) -> Bool {
+        guard !displayTranslation.isEmpty else { return false }
+        if displayTranslation.count >= 120 { return true }
+        if displayOriginal.count >= 160 { return true }
+        if Date().timeIntervalSince(segmentStartedAt) >= 8 { return true }
+        return displayTranslation.range(of: #"[.!?。！？]\s*$"#, options: .regularExpression) != nil
+    }
+
+    private func resetSegment() {
+        finalOriginalTokens.removeAll()
+        finalTranslationTokens.removeAll()
+        segmentStartedAt = Date()
+    }
+
     private func isCommitted(_ token: [String: Any]) -> Bool {
         (token["is_final"] as? Bool ?? false)
             || (token["final"] as? Bool ?? false)
@@ -315,32 +348,18 @@ private final class BroadcastPCMConverter {
             return nil
         }
 
+        let stream = streamDescription.pointee
         guard let format = AVAudioFormat(streamDescription: streamDescription) else { return nil }
         let frameCount = AVAudioFrameCount(CMSampleBufferGetNumSamples(sampleBuffer))
         guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { return nil }
 
         var blockBuffer: CMBlockBuffer?
-        var neededSize = 0
-        var status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
-            sampleBuffer,
-            bufferListSizeNeededOut: &neededSize,
-            bufferListOut: nil,
-            bufferListSize: 0,
-            blockBufferAllocator: kCFAllocatorDefault,
-            blockBufferMemoryAllocator: kCFAllocatorDefault,
-            flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment,
-            blockBufferOut: &blockBuffer
-        )
-        guard status == noErr, neededSize > 0 else { return nil }
-
-        let rawABL = UnsafeMutableRawPointer.allocate(byteCount: neededSize, alignment: MemoryLayout<AudioBufferList>.alignment)
-        defer { rawABL.deallocate() }
-
-        status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
+        var audioBufferList = AudioBufferList()
+        let status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
             sampleBuffer,
             bufferListSizeNeededOut: nil,
-            bufferListOut: rawABL.assumingMemoryBound(to: AudioBufferList.self),
-            bufferListSize: neededSize,
+            bufferListOut: &audioBufferList,
+            bufferListSize: MemoryLayout<AudioBufferList>.size,
             blockBufferAllocator: kCFAllocatorDefault,
             blockBufferMemoryAllocator: kCFAllocatorDefault,
             flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment,
@@ -349,56 +368,24 @@ private final class BroadcastPCMConverter {
         guard status == noErr else { return nil }
 
         pcmBuffer.frameLength = frameCount
-        if !copyAudioBuffers(rawABL.assumingMemoryBound(to: AudioBufferList.self), streamDescription: streamDescription, to: pcmBuffer) {
+
+        let bytesPerFrame = Int(stream.mBytesPerFrame) > 1 ? Int(stream.mBytesPerFrame) : 1
+        let byteCount = Int(frameCount) * bytesPerFrame
+
+        if stream.mFormatFlags & kAudioFormatFlagIsFloat != 0, let floatChannelData = pcmBuffer.floatChannelData {
+            guard let sourceData = audioBufferList.mBuffers.mData else { return nil }
+            let source = sourceData.assumingMemoryBound(to: Float.self)
+            let count = min(Int(frameCount), byteCount / MemoryLayout<Float>.size)
+            floatChannelData[0].assign(from: source, count: count)
+        } else if let int16ChannelData = pcmBuffer.int16ChannelData {
+            guard let sourceData = audioBufferList.mBuffers.mData else { return nil }
+            let source = sourceData.assumingMemoryBound(to: Int16.self)
+            let count = min(Int(frameCount), byteCount / MemoryLayout<Int16>.size)
+            int16ChannelData[0].assign(from: source, count: count)
+        } else {
             return nil
         }
 
         return pcmBuffer
-    }
-
-    private func copyAudioBuffers(_ audioBufferList: UnsafeMutablePointer<AudioBufferList>, streamDescription: UnsafePointer<AudioStreamBasicDescription>, to pcmBuffer: AVAudioPCMBuffer) -> Bool {
-        let stream = streamDescription.pointee
-        let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
-        let channelCount = Int(pcmBuffer.format.channelCount)
-        let frameCount = Int(pcmBuffer.frameLength)
-        let isInterleaved = stream.mFormatFlags & kAudioFormatFlagIsNonInterleaved == 0
-
-        if stream.mFormatFlags & kAudioFormatFlagIsFloat != 0, let destination = pcmBuffer.floatChannelData {
-            if isInterleaved {
-                guard let sourceData = buffers.first?.mData else { return false }
-                let source = sourceData.assumingMemoryBound(to: Float.self)
-                for frame in 0..<frameCount {
-                    for channel in 0..<channelCount {
-                        destination[channel][frame] = source[frame * channelCount + channel]
-                    }
-                }
-            } else {
-                for channel in 0..<min(channelCount, buffers.count) {
-                    guard let sourceData = buffers[channel].mData else { continue }
-                    destination[channel].assign(from: sourceData.assumingMemoryBound(to: Float.self), count: frameCount)
-                }
-            }
-            return true
-        }
-
-        guard stream.mBitsPerChannel == 16, let destination = pcmBuffer.int16ChannelData else {
-            return false
-        }
-
-        if isInterleaved {
-            guard let sourceData = buffers.first?.mData else { return false }
-            let source = sourceData.assumingMemoryBound(to: Int16.self)
-            for frame in 0..<frameCount {
-                for channel in 0..<channelCount {
-                    destination[channel][frame] = source[frame * channelCount + channel]
-                }
-            }
-        } else {
-            for channel in 0..<min(channelCount, buffers.count) {
-                guard let sourceData = buffers[channel].mData else { continue }
-                destination[channel].assign(from: sourceData.assumingMemoryBound(to: Int16.self), count: frameCount)
-            }
-        }
-        return true
     }
 }

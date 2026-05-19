@@ -27,7 +27,12 @@ struct SonioxToken: Codable {
     let stable: Bool?
 
     var isTranslation: Bool {
-        translationStatus == "translation"
+        translationStatus?.lowercased() == "translation"
+    }
+
+    var isOriginal: Bool {
+        let status = translationStatus?.lowercased()
+        return status == nil || status == "none" || status == "original"
     }
 
     var isCommitted: Bool {

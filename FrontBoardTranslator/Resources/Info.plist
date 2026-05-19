@@ -34,6 +34,8 @@
 			<key>CFBundleIconFiles</key>
 			<array>
 				<string>AppIcon60x60</string>
+				<string>AppIcon60x60@2x</string>
+				<string>AppIcon60x60@3x</string>
 			</array>
 			<key>CFBundleIconName</key>
 			<string>AppIcon</string>
@@ -46,7 +48,10 @@
 			<key>CFBundleIconFiles</key>
 			<array>
 				<string>AppIcon60x60</string>
+				<string>AppIcon60x60@2x</string>
+				<string>AppIcon60x60@3x</string>
 				<string>AppIcon76x76</string>
+				<string>AppIcon76x76@2x</string>
 			</array>
 			<key>CFBundleIconName</key>
 			<string>AppIcon</string>
@@ -76,7 +81,7 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>12</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -112,17 +117,15 @@
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>

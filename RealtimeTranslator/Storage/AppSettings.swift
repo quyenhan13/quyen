@@ -2,7 +2,7 @@ import Foundation
 
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
-    private static let appGroupID = "group.com.vteen.Transifyr"
+    private static let appGroupID = "group.com.vteen.RealtimeTranslator"
     
     @Published var sourceLanguage: String {
         didSet {
@@ -35,12 +35,6 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    @Published var enableSystemFloatingScene: Bool {
-        didSet {
-            UserDefaults.standard.set(enableSystemFloatingScene, forKey: "enable_system_floating_scene")
-        }
-    }
-
     private let groupDefaults = UserDefaults(suiteName: appGroupID)
 
     private init() {
@@ -48,7 +42,6 @@ final class AppSettings: ObservableObject {
         self.targetLanguage = UserDefaults.standard.string(forKey: "target_language") ?? "vi"
         self.overlayStyle = UserDefaults.standard.string(forKey: "overlay_style") ?? "Classic"
         self.showOriginalSubtitle = UserDefaults.standard.object(forKey: "show_original_subtitle") as? Bool ?? false
-        self.enableSystemFloatingScene = UserDefaults.standard.object(forKey: "enable_system_floating_scene") as? Bool ?? false
         _ = syncSharedSettings()
     }
     

@@ -40,4 +40,8 @@
 - (void)applicationWillResignActive:(UIApplication *)application {
 }
 
+- (UIInterfaceOrientationMask)application:(UIApplication *)application supportedInterfaceOrientationsForWindow:(UIWindow *)window {
+    return UIInterfaceOrientationMaskAllButUpsideDown;
+}
+
 @end

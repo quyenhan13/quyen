@@ -6,8 +6,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)start;
 - (void)stop;
-- (void)setSubtitlesEnabled:(BOOL)subtitlesEnabled;
-- (BOOL)hasActiveAudio;
 
 @end
 
