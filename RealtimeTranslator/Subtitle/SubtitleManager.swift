@@ -196,20 +196,20 @@ final class SubtitleManager: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
         
-        let pattern = #"[.!?。！？]\s*"#
-        let regex = try? NSRegularExpression(pattern: pattern, options: [])
-        let range = NSRange(location: 0, length: trimmed.utf16.count)
+        let delimiters: Set<Character> = [".", "!", "?", "。", "！", "？"]
         
-        var lastMatchEnd = 0
-        regex?.enumerateMatches(in: trimmed, options: [], range: range) { match, _, _ in
-            if let matchRange = match?.range {
-                lastMatchEnd = matchRange.location + matchRange.length
+        var index = trimmed.endIndex
+        while index > trimmed.startIndex {
+            index = trimmed.index(before: index)
+            let char = trimmed[index]
+            if delimiters.contains(char) {
+                // Nếu dấu câu ở ngay cuối chuỗi, ta bỏ qua và tìm tiếp dấu câu phía trước
+                if index == trimmed.index(before: trimmed.endIndex) {
+                    continue
+                }
+                let nextIndex = trimmed.index(after: index)
+                return String(trimmed[nextIndex...]).trimmingCharacters(in: .whitespacesAndNewlines)
             }
-        }
-        
-        if lastMatchEnd > 0 && lastMatchEnd < trimmed.count {
-            let index = trimmed.index(trimmed.startIndex, offsetBy: lastMatchEnd)
-            return String(trimmed[index...]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         
         return trimmed

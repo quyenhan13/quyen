@@ -37,9 +37,11 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
 
             isPossibleObserver = controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) { [weak self] controller, _ in
                 guard let self = self else { return }
-                if controller.isPictureInPicturePossible && self.wantsPipStart && controller.isPictureInPictureActive != true {
-                    Logger.log("isPictureInPicturePossible là true, tự động kích hoạt PiP chính chủ iOS.")
-                    controller.startPictureInPicture()
+                DispatchQueue.main.async {
+                    if controller.isPictureInPicturePossible && self.wantsPipStart && controller.isPictureInPictureActive != true {
+                        Logger.log("isPictureInPicturePossible là true, tự động kích hoạt PiP chính chủ iOS trên Main Thread.")
+                        controller.startPictureInPicture()
+                    }
                 }
             }
         }
