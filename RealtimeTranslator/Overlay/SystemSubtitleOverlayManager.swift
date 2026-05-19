@@ -278,12 +278,12 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         let textWidth = CGFloat(ceil(Double(boundingBox.width)))
         let textHeight = CGFloat(ceil(Double(boundingBox.height)))
 
-        // Hộp đen mờ bo tròn ôm sát nội dung chữ (Padding ngang 40, dọc 20) - Dùng toán tử ba ngôi loại bỏ hoàn toàn cảnh báo/lỗi phân giải kiểu dữ liệu
-        let boxWidth = textWidth + 44 < renderSize.width - 20 ? textWidth + 44 : renderSize.width - 20
-        let boxHeight = textHeight + 22 < renderSize.height - 16 ? textHeight + 22 : renderSize.height - 16
+        // Hộp dạng thanh ngang dài (docked thanh lịch ở sát cạnh dưới của PiP)
+        let boxWidth = renderSize.width - 32
+        let boxHeight = textHeight + 20 < renderSize.height - 16 ? textHeight + 20 : renderSize.height - 16
         let boxRect = CGRect(
-            x: (renderSize.width - boxWidth) / 2,
-            y: (renderSize.height - boxHeight) / 2,
+            x: 16,
+            y: renderSize.height - boxHeight - 10,
             width: boxWidth,
             height: boxHeight
         )
