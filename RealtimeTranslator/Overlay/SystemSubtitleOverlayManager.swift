@@ -272,28 +272,38 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byWordWrapping
 
-        // Font chữ luôn lớn dày dặn để cực kỳ dễ đọc trên màn hình PiP nhỏ (cố định size 25 siêu nét)
-        let fontSize: CGFloat = 25
-        let textAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
-            .foregroundColor: isPlaceholder ? UIColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.8) : UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
-            .paragraphStyle: paragraph,
-            .strokeColor: UIColor.black.withAlphaComponent(0.9),
-            .strokeWidth: NSNumber(value: -2.5),
-            .shadow: textShadow
-        ]
-
+        // Thuật toán co giãn font thông minh (Shrink-to-fit) tự động giảm kích thước khi câu quá dài để không bị cắt chữ (...)
         let nsText = NSString(string: displayText)
-
-        // Tính toán kích thước chữ và hộp nền động để không bao giờ bị cắt chữ
         let maxTextWidth = renderSize.width - 48
-        let boundingBox = nsText.boundingRect(
-            with: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: textAttrs,
-            context: nil
-        )
-        let textHeight = CGFloat(ceil(Double(boundingBox.height)))
+        let maxAllowedHeight = renderSize.height - 32 // Chừa tối thiểu 32pt cho viền và padding
+
+        var fontSize: CGFloat = 25
+        var textAttrs: [NSAttributedString.Key: Any] = [:]
+        var textHeight: CGFloat = 0
+
+        while fontSize >= 13 {
+            textAttrs = [
+                .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+                .foregroundColor: isPlaceholder ? UIColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.8) : UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
+                .paragraphStyle: paragraph,
+                .strokeColor: UIColor.black.withAlphaComponent(0.9),
+                .strokeWidth: NSNumber(value: -2.5),
+                .shadow: textShadow
+            ]
+
+            let boundingBox = nsText.boundingRect(
+                with: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: textAttrs,
+                context: nil
+            )
+            textHeight = CGFloat(ceil(Double(boundingBox.height)))
+
+            if textHeight <= maxAllowedHeight || fontSize <= 13 {
+                break
+            }
+            fontSize -= 1.5 // Giảm dần kích thước chữ để vừa vặn hoàn hảo
+        }
 
         // Chiều cao hộp tự động co giãn theo số dòng chữ + padding
         let boxWidth = renderSize.width - 24
