@@ -248,16 +248,22 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
 
         // Cấu hình Paragraph Style cho phụ đề tĩnh căn giữa và tự động xuống dòng
         let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = 4
+        let textShadow = NSShadow()
+        textShadow.shadowColor = UIColor.black.withAlphaComponent(0.8)
+        textShadow.shadowOffset = CGSize(width: 0, height: 1.5)
+        textShadow.shadowBlurRadius = 3.0
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byWordWrapping
 
-        let fontSize: CGFloat = renderSize.width > 500 ? 32 : 24
+        let fontSize: CGFloat = renderSize.width > 500 ? 30 : 22
         let textAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
-            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
             .paragraphStyle: paragraph,
-            .strokeColor: UIColor.black,
-            .strokeWidth: NSNumber(value: -3.5) // Viền đen thanh lịch giúp tăng độ tương phản rõ nét trên mọi nền video
+            .strokeColor: UIColor.black.withAlphaComponent(0.85),
+            .strokeWidth: NSNumber(value: -2.0),
+            .shadow: textShadow
         ]
 
         let nsText = NSString(string: displayText)
@@ -273,8 +279,8 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         let textHeight = CGFloat(ceil(Double(boundingBox.height)))
 
         // Hộp đen mờ bo tròn ôm sát nội dung chữ (Padding ngang 40, dọc 20) - Dùng toán tử ba ngôi loại bỏ hoàn toàn cảnh báo/lỗi phân giải kiểu dữ liệu
-        let boxWidth = textWidth + 40 < renderSize.width - 20 ? textWidth + 40 : renderSize.width - 20
-        let boxHeight = textHeight + 20 < renderSize.height - 16 ? textHeight + 20 : renderSize.height - 16
+        let boxWidth = textWidth + 44 < renderSize.width - 20 ? textWidth + 44 : renderSize.width - 20
+        let boxHeight = textHeight + 22 < renderSize.height - 16 ? textHeight + 22 : renderSize.height - 16
         let boxRect = CGRect(
             x: (renderSize.width - boxWidth) / 2,
             y: (renderSize.height - boxHeight) / 2,
@@ -283,21 +289,45 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         )
 
         // Vẽ nền hộp đen mờ (opacity 82% sang xịn)
-        UIColor.black.withAlphaComponent(0.82).setFill()
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let colors = [
+            UIColor(red: 0.10, green: 0.10, blue: 0.14, alpha: 0.82).cgColor,
+            UIColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 0.88).cgColor
+        ] as CFArray
+        let locations: [CGFloat] = [0.0, 1.0]
+        if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: locations) {
+            context.saveGState()
+            let clipPath = UIBezierPath(roundedRect: boxRect, cornerRadius: 16)
+            clipPath.addClip()
+            context.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: boxRect.midX, y: boxRect.minY),
+                end: CGPoint(x: boxRect.midX, y: boxRect.maxY),
+                options: []
+            )
+            context.restoreGState()
+        }
+        UIColor.clear.setFill()
         let path = UIBezierPath(roundedRect: boxRect, cornerRadius: 16)
         path.fill()
 
         // Vẽ viền sáng tinh tế cho hộp phụ đề
-        UIColor.white.withAlphaComponent(0.08).setStroke()
-        let border = UIBezierPath(roundedRect: boxRect.insetBy(dx: 1, dy: 1), cornerRadius: 15)
+        UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.12).setStroke()
+        let border = UIBezierPath(roundedRect: boxRect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 16)
         border.lineWidth = 1
         border.stroke()
 
+        // Vẽ thêm viền vàng ấm áp siêu mảnh ở vòng trong tạo độ tương tương phản và chiều sâu 3D đẳng cấp
+        UIColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.12).setStroke()
+        let innerHighlight = UIBezierPath(roundedRect: boxRect.insetBy(dx: 1.5, dy: 1.5), cornerRadius: 15)
+        innerHighlight.lineWidth = 0.5
+        innerHighlight.stroke()
+
         // Vẽ chữ căn giữa trong hộp
         let textRect = CGRect(
-            x: boxRect.minX + 20,
+            x: boxRect.minX + 22,
             y: boxRect.minY + (boxRect.height - textHeight) / 2,
-            width: boxRect.width - 40,
+            width: boxRect.width - 44,
             height: textHeight
         )
 
