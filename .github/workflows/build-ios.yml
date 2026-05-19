@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build RealtimeTranslator IPA
+    name: Build Transifyr IPA
     runs-on: macos-latest
 
     steps:
@@ -56,13 +56,13 @@ jobs:
             ldid -SRealtimeTranslatorBroadcast/Broadcast.entitlements "$EXTENSION_PATH/$EXTENSION_EXECUTABLE"
           done
           ldid -e "$APP_COPY/$EXECUTABLE"
-          zip -r RealtimeTranslator-trollstore.ipa Payload
+          zip -r Transifyr-trollstore.ipa Payload
 
       - name: Upload TrollStore IPA
         uses: actions/upload-artifact@v4
         with:
-          name: RealtimeTranslator-trollstore-ipa
-          path: RealtimeTranslator-trollstore.ipa
+          name: Transifyr-trollstore-ipa
+          path: Transifyr-trollstore.ipa
 
       - name: Publish Direct IPA Release
         if: github.ref == 'refs/heads/main'
@@ -73,6 +73,6 @@ jobs:
           git tag -f latest
           git push origin latest --force
           gh release delete latest --yes || true
-          gh release create latest RealtimeTranslator-trollstore.ipa \
-            --title "RealtimeTranslator TrollStore IPA" \
-            --notes "Direct .ipa build for TrollStore. Install RealtimeTranslator-trollstore.ipa, not the zipped GitHub artifact."
+          gh release create latest Transifyr-trollstore.ipa \
+            --title "Transifyr TrollStore IPA" \
+            --notes "Direct .ipa build for TrollStore. Install Transifyr-trollstore.ipa, not the zipped GitHub artifact."
