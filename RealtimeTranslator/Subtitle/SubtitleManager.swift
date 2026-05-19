@@ -8,7 +8,7 @@ final class SubtitleManager: ObservableObject {
     private var silenceTimer: Timer?
     private var broadcastTimer: Timer?
     private var lastBroadcastTimestamp: TimeInterval = 0
-    private let groupDefaults = UserDefaults(suiteName: "group.com.vteen.RealtimeTranslator")
+    private let groupDefaults = UserDefaults(suiteName: "group.com.vteen.Transifyr")
     private var confirmedOriginal = ""
     private var confirmedTranslation = ""
     private var activeOriginalSentence = ""

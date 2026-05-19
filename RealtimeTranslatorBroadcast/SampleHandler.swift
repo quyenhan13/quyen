@@ -3,7 +3,7 @@ import CoreMedia
 import ReplayKit
 
 final class SampleHandler: RPBroadcastSampleHandler {
-    private static let appGroupID = "group.com.vteen.RealtimeTranslator"
+    private static let appGroupID = "group.com.vteen.Transifyr"
     private let client = BroadcastSonioxClient()
     private let converter = BroadcastPCMConverter()
     private let defaults = UserDefaults(suiteName: appGroupID)
