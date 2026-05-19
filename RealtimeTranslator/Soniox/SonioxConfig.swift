@@ -11,6 +11,7 @@ struct SonioxConfig: Codable {
     let maxEndpointDelayMs: Int
     let languageHints: [String]?
     let translation: TranslationConfig?
+    let context: ContextConfig?
 
     enum CodingKeys: String, CodingKey {
         case apiKey = "api_key"
@@ -23,6 +24,7 @@ struct SonioxConfig: Codable {
         case maxEndpointDelayMs = "max_endpoint_delay_ms"
         case languageHints = "language_hints"
         case translation
+        case context
     }
 }
 
@@ -34,4 +36,8 @@ struct TranslationConfig: Codable {
         case type
         case targetLanguage = "target_language"
     }
+}
+
+struct ContextConfig: Codable {
+    let text: String
 }

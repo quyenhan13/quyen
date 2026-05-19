@@ -67,6 +67,25 @@ struct HomeView: View {
         }
         .alert(item: $autoUpdateManager.availableUpdate) { update in
             Alert(
+            }
+        }
+
+        .onDisappear {
+            subtitleManager.stopBroadcastSubtitleSync()
+        }
+        .onChange(of: subtitleManager.currentTranslatedText) { newValue in
+            if newValue.isEmpty && subtitleManager.currentText.isEmpty { return }
+            systemOverlay.update(text: subtitleManager.currentText, translation: newValue)
+        }
+        .onChange(of: subtitleManager.currentText) { newValue in
+            if newValue.isEmpty && subtitleManager.currentTranslatedText.isEmpty { return }
+            systemOverlay.update(text: newValue, translation: subtitleManager.currentTranslatedText)
+        }
+        .alert(isPresented: $showAlert) {
+            Alert(title: Text("Thông báo"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+        }
+        .alert(item: $autoUpdateManager.availableUpdate) { update in
+            Alert(
                 title: Text("Có bản cập nhật mới"),
                 message: Text("Tải \(update.title) để cài IPA mới nhất."),
                 primaryButton: .default(Text("Tải ngay")) {
@@ -80,50 +99,53 @@ struct HomeView: View {
     }
 
     private var listenPanel: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Button(action: startBroadcastMode) {
                 HStack(spacing: 8) {
                     Image(systemName: systemOverlay.isRunning ? "stop.fill" : "record.circle.fill")
-                    Text(systemOverlay.isRunning ? "Dừng dịch" : "Bắt đầu thu")
+                        .font(.system(size: 16, weight: .bold))
+                    Text(systemOverlay.isRunning ? "DỪNG DỊCH" : "BẮT ĐẦU THU")
+                        .font(.system(size: 13, weight: .black, design: .rounded))
                 }
-                .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(systemOverlay.isRunning ? TransifyrTheme.dangerGradient : TransifyrTheme.accentGradient)
-                .clipShape(Capsule())
-                .shadow(color: (systemOverlay.isRunning ? Color.red : TransifyrTheme.accent).opacity(0.4), radius: 12, y: 6)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(systemOverlay.isRunning ? TransifyrTheme.dangerGradient : TransifyrTheme.accentGradient)
+                )
+                .shadow(color: (systemOverlay.isRunning ? Color.red : TransifyrTheme.accent).opacity(0.35), radius: 12, x: 0, y: 6)
             }
 
             Button(action: startPiPOnly) {
-                HStack(spacing: 8) {
+                VStack(spacing: 4) {
                     Image(systemName: "pip.enter")
+                        .font(.system(size: 18, weight: .bold))
                     Text("PiP")
+                        .font(.system(size: 10, weight: .bold))
                 }
-                .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .background(Color.white.opacity(0.08))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                .frame(width: 58, height: 52)
+                .background(Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
 
             Button(action: testOverlay) {
-                HStack(spacing: 8) {
+                VStack(spacing: 4) {
                     Image(systemName: "play.rectangle.fill")
-                    Text("Test phụ đề")
+                        .font(.system(size: 18, weight: .bold))
+                    Text("Test")
+                        .font(.system(size: 10, weight: .bold))
                 }
-                .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(Color.white.opacity(0.08))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                .frame(width: 58, height: 52)
+                .background(Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
         }
-        .frame(height: 100)
+        .frame(height: 80)
     }
 
     private var header: some View {
@@ -131,44 +153,43 @@ struct HomeView: View {
             ZStack {
                 Circle()
                     .fill(TransifyrTheme.accentGradient)
-                    .frame(width: 42, height: 42)
-                    .shadow(color: TransifyrTheme.accent.opacity(0.45), radius: 12)
+                    .frame(width: 44, height: 44)
+                    .shadow(color: TransifyrTheme.accent.opacity(0.4), radius: 12, y: 4)
                 Image(systemName: "captions.bubble.fill")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text("Transifyr")
-                        .font(.system(size: 22, weight: .black))
+                        .font(.system(size: 23, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
                     Text("Lite")
-                        .font(.system(size: 22, weight: .black))
+                        .font(.system(size: 23, weight: .black, design: .rounded))
                         .foregroundStyle(TransifyrTheme.accentGradient)
                 }
                 Text("Realtime subtitle translator")
-                    .font(.caption2.weight(.semibold))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundColor(TransifyrTheme.textSecondary)
-                    .textCase(.uppercase)
             }
 
             Spacer()
 
             HStack(spacing: 7) {
                 Circle()
-                    .fill(systemOverlay.isRunning ? Color.green : TransifyrTheme.textSecondary)
+                    .fill(systemOverlay.isRunning ? Color(red: 0.0, green: 0.9, blue: 0.4) : TransifyrTheme.textSecondary)
                     .frame(width: 8, height: 8)
-                    .shadow(color: (systemOverlay.isRunning ? Color.green : TransifyrTheme.textSecondary).opacity(0.8), radius: 6)
-                Text(systemOverlay.isRunning ? "Dịch nổi" : "Sẵn sàng")
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
+                    .shadow(color: (systemOverlay.isRunning ? Color(red: 0.0, green: 0.9, blue: 0.4) : TransifyrTheme.textSecondary).opacity(0.8), radius: 6)
+                Text(systemOverlay.isRunning ? "DỊCH NỔI" : "SẴN SÀNG")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
             }
             .foregroundColor(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(TransifyrTheme.input)
+            .background(Color.white.opacity(0.06))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(TransifyrTheme.border, lineWidth: 1))
+            .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
         }
     }
 
@@ -179,28 +200,27 @@ struct HomeView: View {
             NavigationLink(destination: SettingsView()) {
                 tabLabel(title: "Cài đặt", icon: "gearshape.fill", active: false)
             }
-
         }
         .padding(4)
-        .background(TransifyrTheme.input.opacity(0.8))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(TransifyrTheme.border, lineWidth: 1))
+        .background(Color.black.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.08), lineWidth: 1))
     }
 
     private var broadcastPanel: some View {
         HStack(spacing: 12) {
             BroadcastPickerButton()
                 .frame(width: 44, height: 44)
-                .background(TransifyrTheme.input)
+                .background(Color.white.opacity(0.06))
                 .clipShape(Circle())
-                .overlay(Circle().stroke(TransifyrTheme.borderLight, lineWidth: 1))
+                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Bắt âm thanh app khác")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
                 Text("Bật Transifyr Audio trong Broadcast để dịch như desktop")
-                    .font(.caption2.weight(.semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(TransifyrTheme.textSecondary)
                     .lineLimit(2)
             }
@@ -222,42 +242,46 @@ struct HomeView: View {
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.white)
                     .frame(width: 42, height: 42)
-                    .background(Color.white.opacity(0.08))
+                    .background(Color.white.opacity(0.06))
                     .clipShape(Circle())
-                    .overlay(Circle().stroke(TransifyrTheme.borderLight, lineWidth: 1))
+                    .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
         }
         .padding(12)
-        .background(TransifyrTheme.input.opacity(0.7))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(TransifyrTheme.border, lineWidth: 1))
+        .glassCardStyle()
     }
 
     private var consolePanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Xem trước phụ đề")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(TransifyrTheme.textSecondary)
-                    .textCase(.uppercase)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(TransifyrTheme.accent)
+                        .frame(width: 6, height: 6)
+                    Text("Xem trước phụ đề")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(TransifyrTheme.textSecondary)
+                }
                 Spacer()
                 Button(action: subtitleManager.clear) {
                     Text("Xóa log")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(TransifyrTheme.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(TransifyrTheme.input)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.08), lineWidth: 1))
                 }
             }
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("[Hệ thống] Transifyr Lite sẵn sàng hoạt động.")
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                             .foregroundColor(TransifyrTheme.accentLight)
+                            .padding(.bottom, 4)
 
                         ForEach(subtitleManager.historyLines) { line in
                             logBlock(original: line.text, translated: line.textTranslated)
@@ -270,9 +294,9 @@ struct HomeView: View {
                     }
                     .padding(14)
                 }
-                .background(Color.black.opacity(0.42))
+                .background(Color.black.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
                 .onChange(of: subtitleManager.currentTranslatedText) { _ in
                     withAnimation { proxy.scrollTo("current", anchor: .bottom) }
                 }
@@ -280,15 +304,12 @@ struct HomeView: View {
         }
         .padding(16)
         .frame(maxHeight: .infinity)
-        .background(TransifyrTheme.glass)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(TransifyrTheme.borderLight, lineWidth: 1))
-        .shadow(color: .black.opacity(0.35), radius: 20, y: 10)
+        .glassCardStyle()
     }
 
     private var footer: some View {
         Text("Phiên bản 1.0.0 • Soniox realtime • VTeen")
-            .font(.caption2)
+            .font(.system(size: 11, weight: .medium))
             .foregroundColor(TransifyrTheme.textMuted)
     }
 
@@ -303,13 +324,13 @@ struct HomeView: View {
             }
             if !translated.isEmpty {
                 Text(translated)
-                    .font(.system(size: live ? 19 : 17, weight: .bold))
-                    .foregroundColor(.cyan)
+                    .font(.system(size: live ? 19 : 17, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.0, green: 0.85, blue: 0.95))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 6)
-        .overlay(Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1), alignment: .bottom)
+        .padding(.bottom, 8)
+        .overlay(Rectangle().fill(Color.white.opacity(0.05)).frame(height: 1), alignment: .bottom)
     }
 
     private func tabButton(title: String, icon: String, active: Bool, action: @escaping () -> Void) -> some View {
@@ -321,16 +342,16 @@ struct HomeView: View {
     private func tabLabel(title: String, icon: String, active: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.caption)
+                .font(.system(size: 12, weight: .bold))
             Text(title)
-                .font(.caption.weight(.bold))
+                .font(.system(size: 12, weight: .black, design: .rounded))
                 .lineLimit(1)
         }
         .foregroundColor(active ? .white : TransifyrTheme.textSecondary)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(active ? AnyShapeStyle(TransifyrTheme.accentGradient) : AnyShapeStyle(Color.clear))
-        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .clipShape(RoundedRectangle(cornerRadius: 11))
     }
 
     private func toggleFloatingOverlay() {
@@ -356,7 +377,6 @@ struct HomeView: View {
         if !systemOverlay.isRunning {
             systemOverlay.start()
         }
-        // Gửi nội dung test phụ đề ngay lập tức
         systemOverlay.update(
             text: "Hello! This is a real-time subtitle translation test overlay.",
             translation: "Xin chào! Đây là phụ đề dịch thuật thời gian thực thử nghiệm."
@@ -379,7 +399,7 @@ struct HomeView: View {
         }
 
         guard settings.syncSharedSettings() else {
-            alertMessage = "Vui l\u{00F2}ng v\u{00E0}o C\u{00E0}i \u{0111}\u{1EB7}t v\u{00E0} l\u{01B0}u Soniox API Key tr\u{01B0}\u{1EDB}c khi b\u{1EAD}t Broadcast."
+            alertMessage = "Vui lòng vào Cài đặt và lưu Soniox API Key trước khi bật Broadcast."
             showAlert = true
             return
         }
@@ -401,16 +421,26 @@ struct HomeView: View {
 struct TransifyrBackground: View {
     var body: some View {
         ZStack {
-            Color(red: 0.04, green: 0.035, blue: 0.09)
-            LinearGradient(
-                colors: [
-                    TransifyrTheme.accent.opacity(0.22),
-                    Color(red: 0.85, green: 0.28, blue: 0.94).opacity(0.08),
-                    .clear
-                ],
-                startPoint: .top,
-                endPoint: .bottomLeading
-            )
+            Color(red: 0.03, green: 0.025, blue: 0.07)
+            
+            // Premium Glowing Mesh circles
+            Circle()
+                .fill(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.18))
+                .frame(width: 380, height: 380)
+                .blur(radius: 80)
+                .offset(x: -120, y: -220)
+            
+            Circle()
+                .fill(Color(red: 0.86, green: 0.28, blue: 0.94).opacity(0.12))
+                .frame(width: 320, height: 320)
+                .blur(radius: 70)
+                .offset(x: 140, y: 160)
+            
+            Circle()
+                .fill(Color(red: 0.0, green: 0.8, blue: 0.95).opacity(0.08))
+                .frame(width: 260, height: 260)
+                .blur(radius: 60)
+                .offset(x: -140, y: 280)
         }
         .ignoresSafeArea()
     }
@@ -456,5 +486,34 @@ struct SystemOverlayLayerView: UIViewRepresentable {
         CATransaction.setDisableActions(true)
         displayLayer.frame = uiView.bounds
         CATransaction.commit()
+    }
+}
+
+// Premium visual modifiers for premium designs
+struct GlassCardModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(red: 0.06, green: 0.05, blue: 0.12).opacity(0.65))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.12), Color.white.opacity(0.02), TransifyrTheme.accent.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.35), radius: 15, x: 0, y: 8)
+    }
+}
+
+extension View {
+    func glassCardStyle() -> some View {
+        self.modifier(GlassCardModifier())
     }
 }

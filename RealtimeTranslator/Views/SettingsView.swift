@@ -72,16 +72,21 @@ struct SettingsView: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(TransifyrTheme.textSecondary)
                 Button(action: saveKey) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "key.fill")
-                        Text("Lưu API Key")
+                            .font(.system(size: 15, weight: .bold))
+                        Text("LƯU API KEY")
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                            .letterSpacing(0.5)
                     }
-                    .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(TransifyrTheme.accentGradient)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(TransifyrTheme.accentGradient)
+                    )
+                    .shadow(color: TransifyrTheme.accent.opacity(0.3), radius: 10, x: 0, y: 5)
                 }
             }
         }
@@ -115,19 +120,17 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(TransifyrTheme.textSecondary)
             }
             content()
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(TransifyrTheme.glass)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(TransifyrTheme.borderLight, lineWidth: 1))
+        .glassCardStyle()
     }
 
     private func labeledPicker(_ title: String, selection: Binding<String>, values: [(String, String)]) -> some View {
