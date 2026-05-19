@@ -114,8 +114,11 @@ final class SubtitleManager: ObservableObject {
         let displayOriginal = (finalOriginalTokens + currentNonFinalOriginal).joined()
         let displayTranslation = (finalTranslationTokens + currentNonFinalTranslation).joined()
 
-        let trimmedOriginal = trimSubtitleBuffer(displayOriginal)
-        let trimmedTranslation = trimSubtitleBuffer(displayTranslation)
+        let latestOriginal = extractLatestSentence(displayOriginal)
+        let latestTranslation = extractLatestSentence(displayTranslation)
+
+        let trimmedOriginal = trimSubtitleBuffer(latestOriginal)
+        let trimmedTranslation = trimSubtitleBuffer(latestTranslation)
 
         if !trimmedTranslation.isEmpty || !trimmedOriginal.isEmpty {
             DispatchQueue.main.async {
@@ -189,6 +192,29 @@ final class SubtitleManager: ObservableObject {
         return String(normalized.suffix(maxChars)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private func extractLatestSentence(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        
+        let pattern = #"[.!?。！？]\s*"#
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(location: 0, length: trimmed.utf16.count)
+        
+        var lastMatchEnd = 0
+        regex?.enumerateMatches(in: trimmed, options: [], range: range) { match, _, _ in
+            if let matchRange = match?.range {
+                lastMatchEnd = matchRange.location + matchRange.length
+            }
+        }
+        
+        if lastMatchEnd > 0 && lastMatchEnd < trimmed.count {
+            let index = trimmed.index(trimmed.startIndex, offsetBy: lastMatchEnd)
+            return String(trimmed[index...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        return trimmed
+    }
+
     private func resetSilenceTimer() {
         silenceTimer?.invalidate()
         silenceTimer = Timer.scheduledTimer(withTimeInterval: 6.0, repeats: false) { [weak self] _ in
@@ -217,8 +243,10 @@ final class SubtitleManager: ObservableObject {
         if isFinal || (original.isEmpty && translation.isEmpty) {
             let prevTranslation = translation.isEmpty ? currentTranslatedText : translation
             let prevOriginal = original.isEmpty ? currentText : original
-            let trimmedPrevTranslation = trimSubtitleBuffer(prevTranslation)
-            let trimmedPrevOriginal = trimSubtitleBuffer(prevOriginal)
+            let latestPrevOriginal = extractLatestSentence(prevOriginal)
+            let latestPrevTranslation = extractLatestSentence(prevTranslation)
+            let trimmedPrevTranslation = trimSubtitleBuffer(latestPrevTranslation)
+            let trimmedPrevOriginal = trimSubtitleBuffer(latestPrevOriginal)
             
             if !trimmedPrevTranslation.isEmpty {
                 DispatchQueue.main.async {
@@ -231,9 +259,12 @@ final class SubtitleManager: ObservableObject {
             return
         }
 
+        let latestOriginal = extractLatestSentence(original)
+        let latestTranslation = extractLatestSentence(translation)
+
         DispatchQueue.main.async {
-            self.currentText = original
-            self.currentTranslatedText = self.trimSubtitleBuffer(translation)
+            self.currentText = latestOriginal
+            self.currentTranslatedText = self.trimSubtitleBuffer(latestTranslation)
         }
     }
 }

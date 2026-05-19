@@ -9,6 +9,7 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
 
     let displayLayer = AVSampleBufferDisplayLayer()
     private var pipController: AVPictureInPictureController?
+    private var isPossibleObserver: NSKeyValueObservation?
     private var frameTimer: Timer?
     private var currentText = ""
     private var lastRenderSize = CGSize.zero
@@ -33,6 +34,14 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
             controller.canStartPictureInPictureAutomaticallyFromInline = true
             controller.delegate = self
             pipController = controller
+
+            isPossibleObserver = controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) { [weak self] controller, _ in
+                guard let self = self else { return }
+                if controller.isPictureInPicturePossible && self.wantsPipStart && controller.isPictureInPictureActive != true {
+                    Logger.log("isPictureInPicturePossible là true, tự động kích hoạt PiP chính chủ iOS.")
+                    controller.startPictureInPicture()
+                }
+            }
         }
     }
 
@@ -105,7 +114,7 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
     }
 
     private func enqueueFrame(force: Bool) {
-        guard force || pipController?.isPictureInPictureActive == true else { return }
+        guard force || wantsPipStart || pipController?.isPictureInPictureActive == true else { return }
         if let hideTextAt, Date() >= hideTextAt {
             currentText = ""
             self.hideTextAt = nil
