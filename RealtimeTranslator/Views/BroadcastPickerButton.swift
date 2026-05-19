@@ -12,9 +12,12 @@ struct BroadcastPickerButton: UIViewRepresentable {
         picker.preferredExtension = "com.vteen.Transifyr.Broadcast"
         picker.showsMicrophoneButton = false
 
-        if let button = picker.subviews.compactMap({ $0 as? UIButton }).first {
-            button.setImage(UIImage(systemName: "waveform.circle.fill"), for: .normal)
-            button.tintColor = .white
+        // Chắc chắn tìm thấy button khi subviews của Apple được tạo
+        DispatchQueue.main.async {
+            if let button = self.findButton(in: picker) {
+                button.setImage(UIImage(systemName: "waveform.circle.fill"), for: .normal)
+                button.tintColor = .white
+            }
         }
 
         context.coordinator.observer = NotificationCenter.default.addObserver(
@@ -22,10 +25,10 @@ struct BroadcastPickerButton: UIViewRepresentable {
             object: nil,
             queue: .main
         ) { [weak picker] _ in
-            picker?.subviews
-                .compactMap { $0 as? UIButton }
-                .first?
-                .sendActions(for: .touchUpInside)
+            guard let picker = picker else { return }
+            if let button = self.findButton(in: picker) {
+                button.sendActions(for: .touchUpInside)
+            }
         }
 
         return picker
@@ -35,6 +38,18 @@ struct BroadcastPickerButton: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
+    }
+
+    private func findButton(in view: UIView) -> UIButton? {
+        if let button = view as? UIButton {
+            return button
+        }
+        for subview in view.subviews {
+            if let found = findButton(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 
     final class Coordinator {
