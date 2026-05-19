@@ -13,6 +13,7 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
     private var frameTimer: Timer?
     private var currentText = ""
     private var lastRenderSize = CGSize.zero
+    private var pipRenderSize: CGSize?
     private var hideTextAt: Date?
     private var frameIndex: Int64 = 0
     private let frameRate: Int32 = 24
@@ -89,6 +90,7 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         pipStartAttempts = 0
         hideTextAt = nil
         currentText = ""
+        pipRenderSize = nil
         floatingScene.update(text: "", translation: "")
         enqueueFrame(force: true)
         displayLayer.flushAndRemoveImage()
@@ -362,9 +364,11 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
     }
 
     private func currentRenderSize() -> CGSize {
-        // Cố định tỷ lệ khung hình ngang tiêu chuẩn cực đẹp (680x150) cho mọi trường hợp
-        // Giúp tránh triệt để lỗi cache tỉ lệ khung hình khi thiết bị xoay hoặc khi chạy trong nền
-        return CGSize(width: 680, height: 150)
+        if let pipRenderSize = self.pipRenderSize, pipRenderSize.width > 0, pipRenderSize.height > 0 {
+            return pipRenderSize
+        }
+        // Tỷ lệ vàng rộng rãi 600x250 khớp hoàn hảo giới hạn iOS, giúp hiển thị 3-4 dòng chữ cực sắc nét không lo thiếu chữ
+        return CGSize(width: 600, height: 250)
     }
 }
 
@@ -406,7 +410,20 @@ extension SystemSubtitleOverlayManager: AVPictureInPictureSampleBufferPlaybackDe
         false
     }
 
-    func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {}
+    func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+        let width = CGFloat(newRenderSize.width)
+        let height = CGFloat(newRenderSize.height)
+        guard width > 0 && height > 0 else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let newSize = CGSize(width: width, height: height)
+            if self.pipRenderSize != newSize {
+                self.pipRenderSize = newSize
+                self.lastRenderSize = .zero // Force recreating context with the precise new size
+                self.enqueueFrame(force: true)
+            }
+        }
+    }
 
     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
         completionHandler()
