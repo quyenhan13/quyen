@@ -2,7 +2,7 @@ import Foundation
 
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
-    private static let appGroupID = "group.com.vteen.RealtimeTranslator"
+    private static let appGroupID = "group.com.vteen.Transifyr"
     
     @Published var sourceLanguage: String {
         didSet {
