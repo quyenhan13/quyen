@@ -80,6 +80,8 @@ final class SampleHandler: RPBroadcastSampleHandler {
     private func stopFromContainingAppIfNeeded() -> Bool {
         guard shouldStopBroadcast() else { return false }
         stopRequested = true
+        stopPollTimer?.invalidate()
+        stopPollTimer = nil
         setBroadcastStatus("stopping")
         clearSharedSubtitle(updateTimestamp: true)
         client.disconnect()

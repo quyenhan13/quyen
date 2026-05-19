@@ -63,6 +63,7 @@ final class PlayerLayerPiPSubtitleManager: NSObject, AVPictureInPictureControlle
         pipController?.stopPictureInPicture()
         player?.pause()
         cleanupSubtitleView()
+        try? AudioSessionManager.deactivate()
     }
 
     func update(translation: String) {

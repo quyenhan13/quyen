@@ -96,9 +96,18 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         frameTimer?.invalidate()
         frameTimer = nil
         pipController?.stopPictureInPicture()
+        try? AudioSessionManager.deactivate()
         DispatchQueue.main.async {
             self.isRunning = false
         }
+    }
+
+    deinit {
+        frameTimer?.invalidate()
+        frameTimer = nil
+        pipStartWorkItem?.cancel()
+        pipStartWorkItem = nil
+        try? AudioSessionManager.deactivate()
     }
 
     func update(text: String, translation: String) {
@@ -146,7 +155,13 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         schedulePiPStartAttempt(after: 0.25)
     }
 
-    private func enqueueFrame(force: Bool) {
+    private func enqueueFrame(force: Bool = false) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.enqueueFrame(force: force)
+            }
+            return
+        }
         guard force || pipController?.isPictureInPictureActive == true else { return }
         if let hideTextAt, Date() >= hideTextAt {
             currentText = ""
@@ -246,7 +261,6 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
             return pixelBuffer
         }
 
-        // Cấu hình Paragraph Style cho phụ đề tĩnh căn giữa và tự động xuống dòng
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = 4
         let textShadow = NSShadow()
@@ -256,7 +270,8 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byWordWrapping
 
-        let fontSize: CGFloat = renderSize.width > 500 ? 30 : 22
+        let isLandscape = renderSize.width > renderSize.height
+        let fontSize: CGFloat = isLandscape ? (renderSize.width > 500 ? 30 : 22) : 18
         let textAttrs: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
             .foregroundColor: UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
@@ -267,26 +282,36 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         ]
 
         let nsText = NSString(string: displayText)
-        let maxTextWidth = renderSize.width - 60
-        let boundingBox = nsText.boundingRect(
-            with: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: textAttrs,
-            context: nil
-        )
 
-        let textWidth = CGFloat(ceil(Double(boundingBox.width)))
-        let textHeight = CGFloat(ceil(Double(boundingBox.height)))
-
-        // Hộp dạng thanh ngang dài (docked thanh lịch ở sát cạnh dưới của PiP)
-        let boxWidth = renderSize.width - 32
-        let boxHeight = textHeight + 20 < renderSize.height - 16 ? textHeight + 20 : renderSize.height - 16
-        let boxRect = CGRect(
-            x: 16,
-            y: renderSize.height - boxHeight - 10,
-            width: boxWidth,
-            height: boxHeight
-        )
+        // Hộp vẽ nền phụ đề
+        let boxRect: CGRect
+        if isLandscape {
+            // Chiều rộng khả dụng cho chữ bên trong hộp ngang
+            let maxTextWidth = renderSize.width - 76
+            let boundingBox = nsText.boundingRect(
+                with: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: textAttrs,
+                context: nil
+            )
+            let textHeight = CGFloat(ceil(Double(boundingBox.height)))
+            let boxWidth = renderSize.width - 32
+            let boxHeight = textHeight + 20 < renderSize.height - 16 ? textHeight + 20 : renderSize.height - 16
+            boxRect = CGRect(
+                x: 16,
+                y: renderSize.height - boxHeight - 10,
+                width: boxWidth,
+                height: boxHeight
+            )
+        } else {
+            // Màn dọc: Hộp dạng thanh đứng thanh lịch bao phủ phần lớn chiều cao của dải dọc để tạo dải đen mờ sang trọng
+            boxRect = CGRect(
+                x: 6,
+                y: 10,
+                width: renderSize.width - 12,
+                height: renderSize.height - 20
+            )
+        }
 
         // Vẽ nền hộp đen mờ (opacity 82% sang xịn)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -323,13 +348,39 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         innerHighlight.lineWidth = 0.5
         innerHighlight.stroke()
 
-        // Vẽ chữ căn giữa trong hộp
-        let textRect = CGRect(
-            x: boxRect.minX + 22,
-            y: boxRect.minY + (boxRect.height - textHeight) / 2,
-            width: boxRect.width - 44,
-            height: textHeight
-        )
+        // Tính toán và vẽ chữ căn giữa trong hộp với chiều rộng đồng nhất tuyệt đối
+        let textRect: CGRect
+        if isLandscape {
+            let maxTextWidth = boxRect.width - 44
+            let boundingBox = nsText.boundingRect(
+                with: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: textAttrs,
+                context: nil
+            )
+            let textHeight = CGFloat(ceil(Double(boundingBox.height)))
+            textRect = CGRect(
+                x: boxRect.minX + 22,
+                y: boxRect.minY + (boxRect.height - textHeight) / 2,
+                width: maxTextWidth,
+                height: textHeight
+            )
+        } else {
+            let maxTextWidth = boxRect.width - 16
+            let boundingBox = nsText.boundingRect(
+                with: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: textAttrs,
+                context: nil
+            )
+            let textHeight = CGFloat(ceil(Double(boundingBox.height)))
+            textRect = CGRect(
+                x: boxRect.minX + 8,
+                y: boxRect.minY + (boxRect.height - textHeight) / 2,
+                width: maxTextWidth,
+                height: textHeight
+            )
+        }
 
         context.saveGState()
         nsText.draw(in: textRect, withAttributes: textAttrs)
@@ -349,11 +400,10 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
     private func currentRenderSize() -> CGSize {
         let screenBounds = UIScreen.main.bounds
         let isLandscape = screenBounds.width > screenBounds.height
-        // Thiết lập kích thước tỉ lệ vàng cho hộp phụ đề (aspect ratio rộng để ôm trọn 1-2 dòng)
         if isLandscape {
             return CGSize(width: 720, height: 140)
         } else {
-            return CGSize(width: 480, height: 120)
+            return CGSize(width: 140, height: 720)
         }
     }
 }
