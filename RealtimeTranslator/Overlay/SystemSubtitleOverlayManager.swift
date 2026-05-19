@@ -270,9 +270,8 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byWordWrapping
 
-        let isLandscape = renderSize.width > renderSize.height
-        // Font chữ luôn lớn để cực kỳ dễ đọc (màn ngang 28, màn dọc 24)
-        let fontSize: CGFloat = isLandscape ? 28 : 24
+        // Font chữ luôn lớn dày dặn để cực kỳ dễ đọc trên màn hình PiP nhỏ (cố định size 25 siêu nét)
+        let fontSize: CGFloat = 25
         let textAttrs: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
             .foregroundColor: UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0),
@@ -363,13 +362,9 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
     }
 
     private func currentRenderSize() -> CGSize {
-        let screenBounds = UIScreen.main.bounds
-        let isLandscape = screenBounds.width > screenBounds.height
-        if isLandscape {
-            return CGSize(width: 760, height: 160)
-        } else {
-            return CGSize(width: 580, height: 140)
-        }
+        // Cố định tỷ lệ khung hình ngang tiêu chuẩn cực đẹp (680x150) cho mọi trường hợp
+        // Giúp tránh triệt để lỗi cache tỉ lệ khung hình khi thiết bị xoay hoặc khi chạy trong nền
+        return CGSize(width: 680, height: 150)
     }
 }
 
