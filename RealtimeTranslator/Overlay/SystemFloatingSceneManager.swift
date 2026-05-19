@@ -119,10 +119,11 @@ private final class SystemFloatingSubtitleViewController: UIViewController {
 
         label.textColor = .white
         label.font = .systemFont(ofSize: 19, weight: .heavy)
-        label.numberOfLines = 2
+        label.numberOfLines = 4
         label.textAlignment = .center
         label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.72
+        label.minimumScaleFactor = 0.62
+        label.lineBreakMode = .byWordWrapping
         label.layer.shadowColor = UIColor.black.cgColor
         label.layer.shadowOpacity = 0.9
         label.layer.shadowRadius = 4
@@ -136,12 +137,12 @@ private final class SystemFloatingSubtitleViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         if container.frame == .zero {
-            let width = min(view.bounds.width - 36, 430)
+            let width = min(view.bounds.width - 36, 500)
             container.frame = CGRect(
                 x: (view.bounds.width - width) / 2,
-                y: view.bounds.height - view.safeAreaInsets.bottom - 128,
+                y: view.bounds.height - view.safeAreaInsets.bottom - 160,
                 width: width,
-                height: 72
+                height: 112
             )
         }
         label.frame = container.bounds.insetBy(dx: 18, dy: 10)

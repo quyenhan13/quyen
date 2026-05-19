@@ -34,13 +34,13 @@
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectInset(self.bounds, 16, 9)];
     label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    label.numberOfLines = 2;
+    label.numberOfLines = 4;
     label.textAlignment = NSTextAlignmentCenter;
     label.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold];
     label.textColor = UIColor.whiteColor;
     label.adjustsFontSizeToFitWidth = YES;
-    label.minimumScaleFactor = 0.68;
-    label.lineBreakMode = NSLineBreakByTruncatingTail;
+    label.minimumScaleFactor = 0.62;
+    label.lineBreakMode = NSLineBreakByWordWrapping;
     label.text = @"";
     self.subtitleLabel = label;
     [self addSubview:label];
@@ -51,7 +51,7 @@
 
     CGFloat minSide = MIN(self.bounds.size.width, self.bounds.size.height);
     CGFloat maxSide = MAX(self.bounds.size.width, self.bounds.size.height);
-    BOOL compactHeight = self.bounds.size.height < 68;
+    BOOL compactHeight = self.bounds.size.height < 82;
 
     CGFloat horizontalInset = compactHeight ? 14 : 16;
     CGFloat verticalInset = compactHeight ? 7 : 9;
@@ -64,7 +64,7 @@
     }
 
     self.subtitleLabel.font = [UIFont systemFontOfSize:fontSize weight:UIFontWeightSemibold];
-    self.subtitleLabel.numberOfLines = compactHeight ? 2 : 3;
+    self.subtitleLabel.numberOfLines = compactHeight ? 3 : 4;
     self.layer.cornerRadius = compactHeight ? 12 : 14;
 }
 

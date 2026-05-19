@@ -275,11 +275,11 @@ final class PlayerLayerPiPSubtitleManager: NSObject, AVPictureInPictureControlle
         label.textColor = .white
         label.font = .systemFont(ofSize: 15.5, weight: .semibold)
         label.textAlignment = .center
-        label.numberOfLines = 2
+        label.numberOfLines = 4
         label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.72
-        label.lineBreakMode = .byTruncatingTail
-        label.preferredMaxLayoutWidth = min(window.bounds.width * 0.74, 360)
+        label.minimumScaleFactor = 0.62
+        label.lineBreakMode = .byWordWrapping
+        label.preferredMaxLayoutWidth = min(window.bounds.width * 0.84, 430)
         label.layer.cornerRadius = 12
         label.layer.zPosition = CGFloat.greatestFiniteMagnitude
         label.clipsToBounds = true
@@ -292,9 +292,9 @@ final class PlayerLayerPiPSubtitleManager: NSObject, AVPictureInPictureControlle
             label.leadingAnchor.constraint(greaterThanOrEqualTo: window.leadingAnchor, constant: 12),
             label.trailingAnchor.constraint(lessThanOrEqualTo: window.trailingAnchor, constant: -12),
             label.bottomAnchor.constraint(equalTo: window.safeAreaLayoutGuide.bottomAnchor, constant: -10),
-            label.widthAnchor.constraint(lessThanOrEqualTo: window.widthAnchor, multiplier: 0.78),
+            label.widthAnchor.constraint(lessThanOrEqualTo: window.widthAnchor, multiplier: 0.86),
             label.heightAnchor.constraint(greaterThanOrEqualToConstant: 34),
-            label.heightAnchor.constraint(lessThanOrEqualToConstant: 62)
+            label.heightAnchor.constraint(lessThanOrEqualToConstant: 104)
         ])
         return label
     }

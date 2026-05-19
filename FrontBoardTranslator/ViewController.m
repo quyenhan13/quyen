@@ -245,13 +245,13 @@
             horizontalSafeWidth = size.width;
         }
         CGFloat homeIndicatorInset = wideLayout ? MAX(safeArea.bottom, MAX(safeArea.left, safeArea.right)) : safeArea.bottom;
-        CGFloat maxSubtitleWidth = wideLayout ? MIN(size.width * 0.72, 700) : MIN(size.width * 0.86, 540);
+        CGFloat maxSubtitleWidth = wideLayout ? MIN(size.width * 0.78, 760) : MIN(size.width * 0.90, 580);
         CGFloat minSubtitleWidth = MIN(horizontalSafeWidth - 24, wideLayout ? 300 : 260);
         minSubtitleWidth = MAX(minSubtitleWidth, 220);
         CGFloat subtitleWidth = MIN(MAX(horizontalSafeWidth - 48, minSubtitleWidth), maxSubtitleWidth);
         CGFloat subtitleHeight = wideLayout
-            ? MIN(MAX(size.height * 0.105, 52), 66)
-            : MIN(MAX(size.height * 0.085, 64), 86);
+            ? MIN(MAX(size.height * 0.145, 78), 108)
+            : MIN(MAX(size.height * 0.125, 92), 124);
         CGFloat bottomInset = MAX(homeIndicatorInset, 12);
         CGFloat centerX = safeArea.left + horizontalSafeWidth / 2.0;
         CGFloat topInset = MAX(safeArea.top, 12);
