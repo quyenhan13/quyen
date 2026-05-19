@@ -354,7 +354,7 @@ struct HomeView: View {
         }
 
         guard settings.syncSharedSettings() else {
-            alertMessage = "Vui l\u{00F2}ng v\u{00E0}o C\u{00E0}i \u{0111}\u{1EB7}t v\u{00E0} l\u{01B0}u Soniox API Key tr\u{01B0}\u{1EDB}c khi b\u{1EAD}t Broadcast."
+            alertMessage = "Vui lòng vào Cài đặt và lưu Soniox API Key trước khi bật Broadcast."
             showAlert = true
             return
         }
@@ -365,9 +365,22 @@ struct HomeView: View {
             return
         }
 
-        systemOverlay.start()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            NotificationCenter.default.post(name: .transifyrStartBroadcast, object: nil)
+        Task {
+            let granted = await Permissions.requestMicrophonePermission()
+            guard granted else {
+                DispatchQueue.main.async {
+                    self.alertMessage = "Ung dung can quyen su dung Microphone de thu am thanh va dich."
+                    self.showAlert = true
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.systemOverlay.start()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    NotificationCenter.default.post(name: .transifyrStartBroadcast, object: nil)
+                }
+            }
         }
     }
 }
