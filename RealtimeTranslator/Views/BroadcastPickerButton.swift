@@ -9,7 +9,7 @@ extension Notification.Name {
 struct BroadcastPickerButton: UIViewRepresentable {
     func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
         let picker = RPSystemBroadcastPickerView(frame: .zero)
-        picker.preferredExtension = "com.vteen.RealtimeTranslator.Broadcast"
+        picker.preferredExtension = "com.vteen.Transifyr.Broadcast"
         picker.showsMicrophoneButton = false
 
         if let button = picker.subviews.compactMap({ $0 as? UIButton }).first {
