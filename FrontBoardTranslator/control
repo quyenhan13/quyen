@@ -1,0 +1,8 @@
+Package: com.vteen.transifyr.frontboard
+Name: Transifyr FrontBoard
+Version: 0.0.2
+Architecture: iphoneos-arm
+Description: FrontBoard floating subtitle shell for Transifyr.
+Maintainer: vteen
+Author: vteen
+Section: Utilities
