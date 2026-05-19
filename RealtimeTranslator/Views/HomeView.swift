@@ -49,6 +49,19 @@ struct HomeView: View {
                 await autoUpdateManager.checkForUpdates(silent: true)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .transifyrBroadcastButtonTapped)) { _ in
+            guard settings.syncSharedSettings() else {
+                alertMessage = "Vui lòng vào Cài đặt và lưu Soniox API Key trước khi bật Broadcast."
+                showAlert = true
+                return
+            }
+            guard systemOverlay.isSupported else {
+                alertMessage = "May nay khong ho tro PiP overlay de hien ben ngoai app."
+                showAlert = true
+                return
+            }
+            systemOverlay.start()
+        }
 
         .onDisappear {
             subtitleManager.stopBroadcastSubtitleSync()
@@ -78,7 +91,7 @@ struct HomeView: View {
 
     private var listenPanel: some View {
         HStack(spacing: 14) {
-            Button(action: startBroadcastMode) {
+            ZStack {
                 HStack(spacing: 8) {
                     Image(systemName: systemOverlay.isRunning ? "stop.fill" : "record.circle.fill")
                     Text(systemOverlay.isRunning ? "Dừng dịch" : "Bắt đầu thu")
@@ -90,7 +103,20 @@ struct HomeView: View {
                 .background(systemOverlay.isRunning ? TransifyrTheme.dangerGradient : TransifyrTheme.accentGradient)
                 .clipShape(Capsule())
                 .shadow(color: (systemOverlay.isRunning ? Color.red : TransifyrTheme.accent).opacity(0.4), radius: 12, y: 6)
+
+                if !systemOverlay.isRunning {
+                    BroadcastPickerButton()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(0.015)
+                        .allowsHitTesting(true)
+                } else {
+                    Button(action: startBroadcastMode) {
+                        Color.clear
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
             }
+            .fixedSize()
 
             Button(action: testOverlay) {
                 HStack(spacing: 8) {
@@ -172,7 +198,9 @@ struct HomeView: View {
 
     private var broadcastPanel: some View {
         HStack(spacing: 12) {
-            BroadcastPickerButton()
+            Image(systemName: "waveform.and.mic")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(systemOverlay.isRunning ? .green : TransifyrTheme.textSecondary)
                 .frame(width: 44, height: 44)
                 .background(TransifyrTheme.input)
                 .clipShape(Circle())
@@ -365,22 +393,9 @@ struct HomeView: View {
             return
         }
 
-        Task {
-            let granted = await Permissions.requestMicrophonePermission()
-            guard granted else {
-                DispatchQueue.main.async {
-                    self.alertMessage = "Ung dung can quyen su dung Microphone de thu am thanh va dich."
-                    self.showAlert = true
-                }
-                return
-            }
-            
-            DispatchQueue.main.async {
-                self.systemOverlay.start()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    NotificationCenter.default.post(name: .transifyrStartBroadcast, object: nil)
-                }
-            }
+        systemOverlay.start()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            NotificationCenter.default.post(name: .transifyrStartBroadcast, object: nil)
         }
     }
 }

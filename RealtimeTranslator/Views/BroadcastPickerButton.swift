@@ -4,6 +4,7 @@ import UIKit
 
 extension Notification.Name {
     static let transifyrStartBroadcast = Notification.Name("transifyrStartBroadcast")
+    static let transifyrBroadcastButtonTapped = Notification.Name("transifyrBroadcastButtonTapped")
 }
 
 final class CustomBroadcastPickerView: RPSystemBroadcastPickerView {
@@ -38,8 +39,12 @@ struct BroadcastPickerButton: UIViewRepresentable {
 
         picker.onButtonFound = { button in
             context.coordinator.button = button
-            button.setImage(UIImage(systemName: "waveform.circle.fill"), for: .normal)
-            button.tintColor = .white
+            // Làm trong suốt hoàn toàn ảnh mặc định của Apple để không bị đè lên UI chính
+            button.setImage(nil, for: .normal)
+            button.tintColor = .clear
+            
+            button.removeTarget(nil, action: nil, for: .allEvents)
+            button.addTarget(context.coordinator, action: #selector(Coordinator.buttonTapped), for: .touchUpInside)
         }
 
         let coordinator = context.coordinator
@@ -69,9 +74,14 @@ struct BroadcastPickerButton: UIViewRepresentable {
         Coordinator()
     }
 
-    final class Coordinator {
+    final class Coordinator: NSObject {
         var observer: NSObjectProtocol?
         var button: UIButton?
+
+        @objc func buttonTapped() {
+            Logger.log("Nguoi dung da tap vat ly vao ReplayKit Broadcast Button.")
+            NotificationCenter.default.post(name: .transifyrBroadcastButtonTapped, object: nil)
+        }
 
         deinit {
             if let observer {
