@@ -6,41 +6,18 @@ extension Notification.Name {
     static let transifyrStartBroadcast = Notification.Name("transifyrStartBroadcast")
 }
 
-struct BroadcastPickerButton: UIViewRepresentable {
-    func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
-        let picker = RPSystemBroadcastPickerView(frame: .zero)
-        picker.preferredExtension = "com.vteen.Transifyr.Broadcast"
-        picker.showsMicrophoneButton = false
-
-        // Chắc chắn tìm thấy button khi subviews của Apple được tạo
-        DispatchQueue.main.async {
-            if let button = self.findButton(in: picker) {
-                button.setImage(UIImage(systemName: "waveform.circle.fill"), for: .normal)
-                button.tintColor = .white
-            }
+final class CustomBroadcastPickerView: RPSystemBroadcastPickerView {
+    var onButtonFound: ((UIButton) -> Void)?
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if let button = findButton(in: self) {
+            button.frame = bounds
+            onButtonFound?(button)
         }
-
-        context.coordinator.observer = NotificationCenter.default.addObserver(
-            forName: .transifyrStartBroadcast,
-            object: nil,
-            queue: .main
-        ) { [weak picker] _ in
-            guard let picker = picker else { return }
-            if let button = self.findButton(in: picker) {
-                button.sendActions(for: .touchUpInside)
-            }
-        }
-
-        return picker
     }
-
-    func updateUIView(_ uiView: RPSystemBroadcastPickerView, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    private func findButton(in view: UIView) -> UIButton? {
+    
+    func findButton(in view: UIView) -> UIButton? {
         if let button = view as? UIButton {
             return button
         }
@@ -51,9 +28,49 @@ struct BroadcastPickerButton: UIViewRepresentable {
         }
         return nil
     }
+}
+
+struct BroadcastPickerButton: UIViewRepresentable {
+    func makeUIView(context: Context) -> CustomBroadcastPickerView {
+        let picker = CustomBroadcastPickerView(frame: .zero)
+        picker.preferredExtension = "com.vteen.Transifyr.Broadcast"
+        picker.showsMicrophoneButton = false
+
+        picker.onButtonFound = { button in
+            context.coordinator.button = button
+            button.setImage(UIImage(systemName: "waveform.circle.fill"), for: .normal)
+            button.tintColor = .white
+        }
+
+        context.coordinator.observer = NotificationCenter.default.addObserver(
+            forName: .transifyrStartBroadcast,
+            object: nil,
+            queue: .main
+        ) { [weak picker] _ in
+            guard let picker = picker else { return }
+            if let button = context.coordinator.button {
+                button.sendActions(for: .touchUpInside)
+                Logger.log("Kich hoat thanh cong ReplayKit Broadcast Button.")
+            } else if let button = picker.findButton(in: picker) {
+                button.sendActions(for: .touchUpInside)
+                Logger.log("Kich hoat thanh cong ReplayKit Broadcast Button (fallback search).")
+            } else {
+                Logger.log("Khong tim thay Apple ReplayKit button trong picker view.", level: .error)
+            }
+        }
+
+        return picker
+    }
+
+    func updateUIView(_ uiView: CustomBroadcastPickerView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
 
     final class Coordinator {
         var observer: NSObjectProtocol?
+        var button: UIButton?
 
         deinit {
             if let observer {

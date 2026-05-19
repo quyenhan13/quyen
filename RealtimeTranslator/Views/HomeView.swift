@@ -416,19 +416,32 @@ enum TransifyrTheme {
 struct SystemOverlayLayerView: UIViewRepresentable {
     let displayLayer: AVSampleBufferDisplayLayer
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.backgroundColor = .clear
-        
-        displayLayer.frame = view.bounds
-        view.layer.addSublayer(displayLayer)
-        return view
+    func makeUIView(context: Context) -> LayerContainerView {
+        return LayerContainerView(displayLayer: displayLayer)
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        displayLayer.frame = uiView.bounds
-        CATransaction.commit()
+    func updateUIView(_ uiView: LayerContainerView, context: Context) {}
+    
+    final class LayerContainerView: UIView {
+        let displayLayer: AVSampleBufferDisplayLayer
+        
+        init(displayLayer: AVSampleBufferDisplayLayer) {
+            self.displayLayer = displayLayer
+            super.init(frame: .zero)
+            backgroundColor = .clear
+            layer.addSublayer(displayLayer)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            displayLayer.frame = bounds
+            CATransaction.commit()
+        }
     }
 }
