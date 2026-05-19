@@ -26,7 +26,7 @@ struct HomeView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
                         .allowsHitTesting(false)
-                        .opacity(systemOverlay.isRunning ? 1.0 : 0.01)
+                        .opacity(1.0)
 
                     tabBar
                     listenPanel

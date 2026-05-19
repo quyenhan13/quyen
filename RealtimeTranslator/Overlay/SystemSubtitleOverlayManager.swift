@@ -66,8 +66,10 @@ final class SystemSubtitleOverlayManager: NSObject, ObservableObject {
                 self.isRunning = true
             }
             
-            // Enqueue sample buffer lập tức để kích hoạt khả năng bắt đầu PiP
-            enqueueFrame(force: true)
+            // Enqueue sample buffer lập tức để kích hoạt khả năng bắt đầu PiP (Warm up 6 frames)
+            for _ in 0..<6 {
+                enqueueFrame(force: true)
+            }
             startFrameTimer()
             
             // Thử khởi chạy PiP ngay lập tức
