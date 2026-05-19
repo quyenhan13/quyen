@@ -42,13 +42,14 @@ struct BroadcastPickerButton: UIViewRepresentable {
             button.tintColor = .white
         }
 
+        let coordinator = context.coordinator
         context.coordinator.observer = NotificationCenter.default.addObserver(
             forName: .transifyrStartBroadcast,
             object: nil,
             queue: .main
         ) { [weak picker] _ in
             guard let picker = picker else { return }
-            if let button = context.coordinator.button {
+            if let button = coordinator.button {
                 button.sendActions(for: .touchUpInside)
                 Logger.log("Kich hoat thanh cong ReplayKit Broadcast Button.")
             } else if let button = picker.findButton(in: picker) {
