@@ -77,7 +77,7 @@ struct SettingsView: View {
                             .font(.system(size: 15, weight: .bold))
                         Text("LƯU API KEY")
                             .font(.system(size: 13, weight: .black, design: .rounded))
-                            .letterSpacing(0.5)
+                            .tracking(0.5)
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)

@@ -50,26 +50,6 @@ struct HomeView: View {
                 await autoUpdateManager.checkForUpdates(silent: true)
             }
         }
-
-        .onDisappear {
-            subtitleManager.stopBroadcastSubtitleSync()
-        }
-        .onChange(of: subtitleManager.currentTranslatedText) { newValue in
-            if newValue.isEmpty && subtitleManager.currentText.isEmpty { return }
-            systemOverlay.update(text: subtitleManager.currentText, translation: newValue)
-        }
-        .onChange(of: subtitleManager.currentText) { newValue in
-            if newValue.isEmpty && subtitleManager.currentTranslatedText.isEmpty { return }
-            systemOverlay.update(text: newValue, translation: subtitleManager.currentTranslatedText)
-        }
-        .alert(isPresented: $showAlert) {
-            Alert(title: Text("Thông báo"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-        }
-        .alert(item: $autoUpdateManager.availableUpdate) { update in
-            Alert(
-            }
-        }
-
         .onDisappear {
             subtitleManager.stopBroadcastSubtitleSync()
         }
