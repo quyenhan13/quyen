@@ -18,20 +18,20 @@ struct HomeView: View {
 
                 VStack(spacing: 14) {
                     header
-                    
-                    // Live Preview của phụ đề nổi (Bắt buộc phải hiển thị để iOS cho phép PiP hoạt động mượt mà)
-                    SystemOverlayLayerView(displayLayer: systemOverlay.displayLayer)
-                        .frame(height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                        .allowsHitTesting(false)
-                        .opacity(systemOverlay.isRunning ? 1.0 : 0.01)
-
                     tabBar
                     listenPanel
                     broadcastPanel
                     consolePanel
+                    
+                    // Live Preview của phụ đề nổi (Bắt buộc phải hiển thị để iOS cho phép PiP hoạt động mượt mà)
+                    SystemOverlayLayerView(displayLayer: systemOverlay.displayLayer)
+                        .frame(height: systemOverlay.isRunning ? 120 : 0)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, systemOverlay.isRunning ? 10 : 0)
+                        .allowsHitTesting(false)
+                        .opacity(systemOverlay.isRunning ? 1.0 : 0.01)
+
                     footer
                 }
                 .padding(.horizontal, 18)

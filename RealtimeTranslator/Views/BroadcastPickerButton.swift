@@ -6,16 +6,27 @@ extension Notification.Name {
     static let transifyrStartBroadcast = Notification.Name("transifyrStartBroadcast")
 }
 
-struct BroadcastPickerButton: UIViewRepresentable {
+struct BroadcastPickerButton: View {
+    var body: some View {
+        ZStack {
+            // Icon hiển thị custom bằng SwiftUI cực kỳ đẹp và sắc nét
+            Image(systemName: "waveform.circle.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(.white)
+            
+            // Nút gốc ẩn bằng cách set alpha rất nhỏ để vẫn bắt được sự kiện tap
+            SystemBroadcastPickerRepresentable()
+                .frame(width: 44, height: 44)
+                .opacity(0.01) // Vẫn tương tác được nhưng không hiển thị giao diện mặc định
+        }
+    }
+}
+
+struct SystemBroadcastPickerRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
         let picker = RPSystemBroadcastPickerView(frame: .zero)
         picker.preferredExtension = "com.vteen.RealtimeTranslator.Broadcast"
         picker.showsMicrophoneButton = false
-
-        if let button = picker.subviews.compactMap({ $0 as? UIButton }).first {
-            button.setImage(UIImage(systemName: "waveform.circle.fill"), for: .normal)
-            button.tintColor = .white
-        }
 
         context.coordinator.observer = NotificationCenter.default.addObserver(
             forName: .transifyrStartBroadcast,
